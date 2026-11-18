@@ -1,0 +1,10 @@
+node_modules
+dist
+userdata
+ui
+db
+scripts
+.infra
+.idea
+.git
+.DS_Store

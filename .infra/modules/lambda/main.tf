@@ -1,0 +1,90 @@
+resource "aws_iam_role" "this" {
+  name               = "${var.name}-execution-role"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role_policy.json
+  tags               = var.tags
+}
+
+resource "aws_iam_policy" "this" {
+  name   = "${var.name}-execution-policy"
+  policy = data.aws_iam_policy_document.lambda_execution_role_policy.json
+  tags   = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "this" {
+  role       = aws_iam_role.this.name
+  policy_arn = aws_iam_policy.this.arn
+}
+
+resource "aws_cloudwatch_log_group" "this" {
+  name              = "/aws/lambda/${var.name}"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+resource "aws_lambda_function" "this" {
+  function_name = var.name
+  role          = aws_iam_role.this.arn
+
+  package_type = var.package_type
+  runtime      = var.package_type == "Zip" ? var.runtime : null
+  handler      = var.package_type == "Zip" ? var.handler : null
+
+  s3_bucket         = var.package_type == "Zip" ? var.s3_bucket : null
+  s3_key            = var.package_type == "Zip" ? var.s3_key : null
+  s3_object_version = var.package_type == "Zip" ? data.aws_s3_object.package[0].version_id : null
+
+  image_uri = var.package_type == "Image" ? var.image_uri : null
+
+  dynamic "image_config" {
+    for_each = var.package_type == "Image" && length(var.image_command) > 0 ? [1] : []
+    content {
+      command = var.image_command
+    }
+  }
+
+  memory_size = var.memory_size
+  timeout     = var.timeout
+
+  # SnapStart only applies to published versions, never to $LATEST, so every
+  # deploy must publish a new version for the snapshot to be (re)created.
+  publish = true
+
+  # SnapStart supports neither container images nor the Node.js runtimes.
+  dynamic "snap_start" {
+    for_each = var.package_type == "Zip" ? [1] : []
+    content {
+      apply_on = "PublishedVersions"
+    }
+  }
+
+  tracing_config {
+    mode = var.tracing_mode
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.this.name
+  }
+
+  environment {
+    variables = merge(
+      { AWS_XRAY_CONTEXT_MISSING = "IGNORE_ERROR" },
+      var.environment_variables,
+      length(var.ssm_parameter_paths) > 0 ? {
+        SSM_BACKED_PROPERTIES = join("\n", [for property_name, path in var.ssm_parameter_paths : "${property_name}=${path}"])
+      } : {},
+    )
+  }
+
+  tags = var.tags
+
+  depends_on = [aws_iam_role_policy_attachment.this]
+}
+
+# Callers (API Gateway) target this alias rather than $LATEST so that every
+# invocation resolves to a published, SnapStart-enabled version.
+resource "aws_lambda_alias" "live" {
+  name             = var.alias_name
+  function_name    = aws_lambda_function.this.function_name
+  function_version = aws_lambda_function.this.version
+}
