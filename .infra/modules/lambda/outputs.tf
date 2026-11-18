@@ -1,0 +1,38 @@
+output "function_name" {
+  value = aws_lambda_function.this.function_name
+}
+
+output "role_arn" {
+  description = "ARN of the execution role, e.g. for mapping it to a database role"
+  value       = aws_iam_role.this.arn
+}
+
+output "log_group_name" {
+  value = aws_cloudwatch_log_group.this.name
+}
+
+output "function_arn" {
+  value = aws_lambda_function.this.arn
+}
+
+output "alias_name" {
+  value = aws_lambda_alias.live.name
+}
+
+output "invoke_arn" {
+  description = "Invoke ARN of the alias, so invocations resolve to the published SnapStart version"
+  value       = aws_lambda_alias.live.invoke_arn
+}
+
+output "alias_arn" {
+  value = aws_lambda_alias.live.arn
+}
+
+output "published_version" {
+  value = aws_lambda_function.this.version
+}
+
+output "keep_warm_rule_arn" {
+  description = "ARN of the EventBridge warmup rule, or null when keep_warm is disabled"
+  value       = var.keep_warm ? aws_cloudwatch_event_rule.keep_warm[0].arn : null
+}

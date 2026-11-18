@@ -2,18 +2,31 @@
   "name": "djinni",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/handlers/scraper.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "nodemon --ignore 'userdata/*' --exec \"node -r tsconfig-paths/register -r ts-node/register src/index.ts\""
+    "build": "esbuild src/handlers/*.ts --bundle --platform=node --target=node22 --outdir=dist/handlers --external:playwright --external:playwright-core --external:playwright-extra --external:puppeteer-extra-plugin-stealth --external:puppeteer-extra-plugin-recaptcha",
+    "typecheck": "tsc --noEmit",
+    "dev": "nodemon --ignore 'userdata/*' --exec \"node -r tsconfig-paths/register -r ts-node/register src/index.ts\"",
+    "migrate": "node -r tsconfig-paths/register -r ts-node/register scripts/migrate.ts"
   },
   "dependencies": {
-    "@playwright/browser-chromium": "^1.50.1",
+    "@aws-sdk/client-sesv2": "^3.1171.0",
+    "@aws-sdk/client-sqs": "^3.1170.0",
+    "@aws-sdk/client-ssm": "^3.1170.0",
+    "@aws-sdk/dsql-signer": "^3.1171.0",
+    "aws-lambda-ric": "^4.0.2",
+    "pg": "^8.23.1",
     "playwright": "^1.50.1",
     "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-recaptcha": "^3.6.8",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
+    "@playwright/browser-chromium": "^1.50.1",
+    "@types/aws-lambda": "^8.10.164",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",

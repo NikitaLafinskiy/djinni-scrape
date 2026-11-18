@@ -1,12 +1,20 @@
 import {scrape} from "./scrape";
-
-const urlsList = [
-    // "https://djinni.co/my/dashboard/",
-    "https://djinni.co/jobs/?exclude_keywords=lead%20senior%20php%20angular%20vue&primary_keyword=Fullstack&primary_keyword=Java&primary_keyword=Golang&primary_keyword=DevOps&exp_level=1y&exp_level=2y&exp_level=3y&employment=remote"
-];
+import {getUrl} from "@/db/users";
+import {closePool} from "@/db/client";
 
 (async () => {
-    for (let i = 0; i < urlsList.length; i++) {
-        await scrape(urlsList[i])
+    const userId = process.env.USER_ID
+    const urlId = process.env.URL_ID
+    if (!userId || !urlId) {
+        throw new Error("Set USER_ID and URL_ID to the user and url to scrape")
+    }
+    const userUrl = await getUrl(userId, urlId)
+    if (!userUrl) {
+        throw new Error(`url ${urlId} does not belong to user ${userId}`)
+    }
+    try {
+        await scrape({userId, urlId, url: userUrl.url}, {headless: process.env.HEADLESS === "1", shouldStop: () => false})
+    } finally {
+        await closePool()
     }
 })()

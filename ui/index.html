@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Djinni Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js"></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar" hidden>
+    <a class="brand" href="#/users">Djinni admin</a>
+    <nav>
+        <a href="#/users" data-nav="users">Users</a>
+        <a href="#/not-applied" data-nav="not-applied">Not applied</a>
+    </nav>
+    <button type="button" class="link" id="logout">Log out</button>
+</header>
+<main id="app"></main>
+<div id="toast" role="status" hidden></div>
+</body>
+</html>
