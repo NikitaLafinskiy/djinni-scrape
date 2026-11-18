@@ -196,7 +196,12 @@ const routes: Route[] = [
 ]
 
 const isAuthorized = async (header: string | undefined) => {
-    const expected = Buffer.from("Basic " + Buffer.from(await getSsmProperty("admin-basic-auth")).toString("base64"))
+    const credentials = await getSsmProperty("admin-basic-auth")
+    const separator = credentials.indexOf(":")
+    if (separator < 1 || separator === credentials.length - 1) {
+        throw new Error("admin-basic-auth must be \"user:password\" with both parts non-empty")
+    }
+    const expected = Buffer.from("Basic " + Buffer.from(credentials).toString("base64"))
     const actual = Buffer.from(header ?? "")
     return actual.length === expected.length && timingSafeEqual(actual, expected)
 }

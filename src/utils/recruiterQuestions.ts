@@ -45,22 +45,33 @@ const isValid = (question: Question, answer: Answer) => {
     }
 }
 
-// returns null when the questions have to be answered manually
+const redact = (text: string, secrets: string[]) =>
+    secrets.reduce((result, secret) => result.split(secret).join("[redacted]"), text)
+
+// returns null when the questions have to be answered manually; secrets (the user's passwords) are removed from
+// everything sent to the model, and an answer that still contains one is never used
 export const answerQuestions = async (
     candidateInfo: string | null,
     job: {title?: string | null, companyName?: string | null, description: string},
     questions: Question[],
+    secrets: (string | null)[],
 ) => {
+    const knownSecrets = secrets.filter((secret): secret is string => !!secret && secret.length >= 4)
     const apiKey = await getMeliousApiKey()
     if (!candidateInfo?.trim() || !apiKey || questions.length === 0) {
         console.log(`not answering recruiter questions with ai: ${!candidateInfo?.trim() ? "no candidate information" : !apiKey ? "no melious api key" : "no questions found"}`)
         return null
     }
-    const content = await complete(apiKey, SYSTEM_PROMPT, JSON.stringify({
+    const prompt = redact(JSON.stringify({
         candidate_information: candidateInfo,
         job: {title: job.title, company: job.companyName, description: job.description.slice(0, 6000)},
         questions: questions.map(({id, label, type, options, required}) => ({id, question: label, type, options, required})),
-    }, null, 2))
+    }, null, 2), knownSecrets)
+    const content = await complete(apiKey, SYSTEM_PROMPT, prompt)
+    if (knownSecrets.some(secret => content.includes(secret))) {
+        console.log("ai answer contained a password, not using it")
+        return null
+    }
     const answers = parseAnswers(content)
     const unanswered = questions.filter(question => question.required && !isValid(question, answers[question.id]))
     if (unanswered.length > 0) {
@@ -180,6 +191,7 @@ export const fillAnswers = async (page: Page, questions: Question[], answers: Re
 export const answerRecruiterQuestions = async (
     page: Page,
     candidateInfo: string | null,
+    secrets: (string | null)[],
     job: {title?: string | null, companyName?: string | null, descriptionSelector: string},
     rootSelector: string,
     controlSelector: string,
@@ -187,7 +199,7 @@ export const answerRecruiterQuestions = async (
     const questions = await extractQuestions(page, rootSelector, controlSelector)
     console.log(`recruiter questions: ${JSON.stringify(questions.map(({label, type, options}) => ({label, type, options})))}`)
     const description = await page.locator(job.descriptionSelector).first().innerText().catch(() => "")
-    const answers = await answerQuestions(candidateInfo, {...job, description}, questions)
+    const answers = await answerQuestions(candidateInfo, {...job, description}, questions, secrets)
     if (!answers) {
         return null
     }

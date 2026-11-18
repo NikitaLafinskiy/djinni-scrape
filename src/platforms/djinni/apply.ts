@@ -57,7 +57,8 @@ export const evaluateJob = async (page: Page, user: ScrapeUser, ignoreWords: str
         const hasAdditionalQuestions = await page.locator("#apply_form h3", {hasText: "Questions from the recruiter"}).isVisible()
         if (hasAdditionalQuestions) {
             known.aiAnswers = await answerRecruiterQuestions(
-                page, user.candidateInfo, {...known, descriptionSelector: ".job-post__description"}, "#apply_form", "[name^='answer_']",
+                page, user.candidateInfo, [user.djinniPassword, user.nfjPassword],
+                {...known, descriptionSelector: ".job-post__description"}, "#apply_form", "[name^='answer_']",
             )
             if (!known.aiAnswers) {
                 console.log("scraping a non-autoapply job: " + page.url())

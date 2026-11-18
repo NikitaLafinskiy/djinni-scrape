@@ -63,7 +63,8 @@ export const evaluateJob = async (page: Page, user: ScrapeUser, ignoreWords: str
         // fields that are still invalid are recruiter questions, answered with ai when possible
         if (await page.locator(`${form.FORM}.ng-invalid`).count() > 0) {
             known.aiAnswers = await answerRecruiterQuestions(
-                page, user.candidateInfo, {...known, descriptionSelector: "common-posting-content-wrapper"}, form.FORM, QUESTION_CONTROLS,
+                page, user.candidateInfo, [user.djinniPassword, user.nfjPassword],
+                {...known, descriptionSelector: "common-posting-content-wrapper"}, form.FORM, QUESTION_CONTROLS,
             )
             if (!known.aiAnswers || await page.locator(`${form.FORM}.ng-invalid`).count() > 0) {
                 console.log("scraping a non-autoapply job: " + page.url())
